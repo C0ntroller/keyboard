@@ -82,7 +82,7 @@ char findCurrentArrPin() {
 }
 
 // Set the next self drive pin
-void nextSelfDrivePin() {
+FASTRUN void nextSelfDrivePin() {
   // Set the current pin to high
   digitalWriteFast(self_drive_pins[curr_self_drive_pin], HIGH);
   // Set the next pin
@@ -90,7 +90,7 @@ void nextSelfDrivePin() {
 }
 
 // Interrupt for power supply check
-void powerStateChanged() {
+FASTRUN void powerStateChanged() {
   unsigned char state = digitalReadFast(POWER_SUPPLY_CHECK_PIN);
   // ! inverted
   if (state == LOW) {
