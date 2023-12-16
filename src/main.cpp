@@ -56,7 +56,7 @@ int8_t getActiveKeyGroup() {
   int8_t last_active_key_group = -1;
   for (uint8_t i = 0; i < KEY_GROUP_NUM; i++) {
     // Update status
-    if (digitalReadFast(group_pins[i])==LOW){
+    if (digitalReadFast(group_pins[i]) == LOW){
       last_active_key_group = (int8_t) i;
       active_groups++;
     }
@@ -73,7 +73,7 @@ int8_t getActiveKeyGroup() {
 // Set the next self drive pin
 FASTRUN void nextSelfDrivePin() {
   // Set the current pin to high
-  digitalWriteFast(self_drive_pins[current_self_drive_pin!=0?current_self_drive_pin-1:KEY_GROUP_NUM-1], LOW);
+  digitalWriteFast(self_drive_pins[current_self_drive_pin != 0 ? current_self_drive_pin - 1 : KEY_GROUP_NUM - 1], LOW);
   digitalWriteFast(self_drive_pins[current_self_drive_pin], HIGH);
   // Set the next pin
   current_self_drive_pin = (current_self_drive_pin + 1) % KEY_GROUP_NUM;
@@ -118,14 +118,16 @@ void loop() {
           // Send MIDI message
           usbMIDI.sendNoteOn(mapToMidi(active_key_group, i), 127, 1);
         }
+
         // Set the entry in the array
-          keys_pressed[active_key_group * 6 + i] += keys_pressed[active_key_group * 6 + i] < 0xFF? 1:0;
+        keys_pressed[active_key_group * 6 + i] += keys_pressed[active_key_group * 6 + i] < 0xFF ? 1 : 0;
       } else {
         // Check if the key is not already released
         if (keys_pressed[active_key_group * 6 + i] < DEBOUNCE_TIMES) {
           // Send MIDI message
           usbMIDI.sendNoteOff(mapToMidi(active_key_group, i), 0, 1);
         }
+
         // Set the entry in the array
         keys_pressed[active_key_group * 6 + i] = 0;
       }
@@ -133,8 +135,7 @@ void loop() {
   }
 
   // MIDI Controllers should discard incoming MIDI messages.
-  while (usbMIDI.read()) {
-  }
+  while (usbMIDI.read()) {}
 
   // switch to next key group, if self powered
   if (digitalReadFast(POWER_SUPPLY_CHECK_PIN) == LOW) {
