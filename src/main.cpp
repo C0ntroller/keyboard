@@ -1,8 +1,5 @@
 #include <Arduino.h>
 
-#define MIDI_NAME {'P', 'i', 'n', 'g', 'b', 'o', 'a', 'r', 'd'}
-#define MIDI_NAME_LEN 9
-
 #define KEY_GROUP_NUM 9
 #define KEY_PINS 6
 #define NUMBER_OF_KEYS 49
