@@ -121,6 +121,12 @@ void loop() {
     uint8_t value;
     
     for (uint8_t i = 0; i < KEY_PINS; i++) {
+      // due to the circuitry, there is one phantom note above
+      // the highest key constantly 'playing'
+      // but we don't need to scan that far anyway 
+      if (active_key_group == KEY_GROUP_NUM-1 && i>0){
+        break;
+      }
       value = digitalReadFast(key_pins[i]);
       // If the key is pressed, we send a MIDI message and set the entry in the array
       // ! inverted
