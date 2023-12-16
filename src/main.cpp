@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <Bounce2.h>
 
 #define MIDI_NAME {'P', 'i', 'n', 'g', 'b', 'o', 'a', 'r', 'd'}
 #define MIDI_NAME_LEN 9
@@ -7,27 +6,19 @@
 #define KEY_GROUP_NUM 9
 #define KEY_PINS 6
 #define NUMBER_OF_KEYS 49
-#define BOUNCE_TIME 5
+
+#define DEBOUNCE_TIMES 2
+
 #define POWER_SUPPLY_CHECK_PIN 13
 
 #define SELF_DRIVE_INTERVAL 100
 
-Bounce group_pins[KEY_GROUP_NUM] {
-  {14, BOUNCE_TIME}, // not KEYS1..6
-  {15, BOUNCE_TIME}, // not KEYS7..12
-  {16, BOUNCE_TIME}, // not KEYS13..18
-  {17, BOUNCE_TIME}, // not KEYS19..24
-  {18, BOUNCE_TIME}, // not KEYS25..30
-  {19, BOUNCE_TIME}, // not KEYS31..36
-  {20, BOUNCE_TIME}, // not KEYS37..42
-  {21, BOUNCE_TIME}, // not KEYS43..48
-  {22, BOUNCE_TIME}  // not KEYS49
-};
+const uint8_t group_pins[KEY_GROUP_NUM] {14, 15, 16, 17, 18, 19, 20, 21, 22};
 
 // not KEY0%6..not KEY5%6
 const uint8_t key_pins[KEY_PINS] {2, 3, 4, 5, 6, 7};
 // Array of pressed keys (initially all 0)
-bool keys_pressed[NUMBER_OF_KEYS];
+uint8_t keys_pressed[NUMBER_OF_KEYS];
 // K1, K2, K3, K4, K5, K12, K13, K14, K15
 const uint8_t self_drive_pins[KEY_GROUP_NUM] {8, 9, 10, 11, 12, 26, 23, 24, 25};
 volatile uint8_t current_self_drive_pin = 0;
@@ -64,17 +55,18 @@ uint8_t mapToMidi(uint8_t active_key_group, uint8_t key) {
 
 // Check if any of the array pins fell since last time
 int8_t getActiveKeyGroup() {
+  uint8_t active_groups = 0;
+  int8_t last_active_key_group = -1;
   for (uint8_t i = 0; i < KEY_GROUP_NUM; i++) {
     // Update status
-    group_pins[i].update();
-    // Check if the pin fell or is low
-    // ! inverted
-    if (group_pins[i].fell()) return i;
+    if (digitalReadFast(group_pins[i])==LOW){
+      last_active_key_group = (int8_t) i;
+      active_groups++;
+    }
   }
-
-  // If none fell we should have enough time to see which one is low
-  for (uint8_t i = 0; i < KEY_GROUP_NUM; i++) {
-    if (group_pins[i].read() == LOW) return i;
+  
+  if (active_groups==1){
+    return last_active_key_group;
   }
 
   // Default return
@@ -105,7 +97,7 @@ FASTRUN void powerStateChanged() {
 void setup() {
   // Set all in- and outputs
   for (uint8_t i = 0; i < KEY_GROUP_NUM; i++) {
-    pinMode(group_pins[i].getPin(), INPUT);
+    pinMode(group_pins[i], INPUT);
     pinMode(self_drive_pins[i], INPUT);
   }
   for (uint8_t i = 0; i < KEY_PINS; i++) {
@@ -134,23 +126,23 @@ void loop() {
       // ! inverted
       if (value == LOW) { 
         // Check if the key is not already pressed
-        if (keys_pressed[active_key_group * 6 + i] == 0) {
+        if (keys_pressed[active_key_group * 6 + i] >= DEBOUNCE_TIMES) {
           // Send MIDI message
           usbMIDI.sendNoteOn(mapToMidi(active_key_group, i), 127, 1);
-          // Set the entry in the array
-          keys_pressed[active_key_group * 6 + i] = 1;
         }
+        // Set the entry in the array
+          keys_pressed[active_key_group * 6 + i] += keys_pressed[active_key_group * 6 + i] < 0xFF? 1:0;
       } else {
         // Check if the key is not already released
-        if (keys_pressed[active_key_group * 6 + i] == 1) {
+        if (keys_pressed[active_key_group * 6 + i] < DEBOUNCE_TIMES) {
           // Send MIDI message
           usbMIDI.sendNoteOff(mapToMidi(active_key_group, i), 0, 1);
-          // Set the entry in the array
-          keys_pressed[active_key_group * 6 + i] = 0;
         }
+        // Set the entry in the array
+        keys_pressed[active_key_group * 6 + i] = 0;
       }
     }
-  }  
+  }
 
   // MIDI Controllers should discard incoming MIDI messages.
   while (usbMIDI.read()) {
