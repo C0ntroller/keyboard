@@ -11,8 +11,6 @@
 
 #define POWER_SUPPLY_CHECK_PIN 13
 
-#define SELF_DRIVE_INTERVAL 100
-
 const uint8_t group_pins[KEY_GROUP_NUM] {14, 15, 16, 17, 18, 19, 20, 21, 22};
 
 // not KEY0%6..not KEY5%6
@@ -21,8 +19,7 @@ const uint8_t key_pins[KEY_PINS] {2, 3, 4, 5, 6, 7};
 uint8_t keys_pressed[NUMBER_OF_KEYS];
 // K1, K2, K3, K4, K5, K12, K13, K14, K15
 const uint8_t self_drive_pins[KEY_GROUP_NUM] {8, 9, 10, 11, 12, 26, 23, 24, 25};
-volatile uint8_t current_self_drive_pin = 0;
-IntervalTimer self_drive_timer = IntervalTimer();
+uint8_t current_self_drive_pin = 0;
 
 // Map the current array and pressed key to a MIDI note
 uint8_t mapToMidi(uint8_t active_key_group, uint8_t key) {
@@ -76,21 +73,10 @@ int8_t getActiveKeyGroup() {
 // Set the next self drive pin
 FASTRUN void nextSelfDrivePin() {
   // Set the current pin to high
+  digitalWriteFast(self_drive_pins[current_self_drive_pin!=0?current_self_drive_pin-1:KEY_GROUP_NUM-1], LOW);
   digitalWriteFast(self_drive_pins[current_self_drive_pin], HIGH);
   // Set the next pin
   current_self_drive_pin = (current_self_drive_pin + 1) % KEY_GROUP_NUM;
-}
-
-// Interrupt for power supply check
-FASTRUN void powerStateChanged() {
-  uint8_t state = digitalReadFast(POWER_SUPPLY_CHECK_PIN);
-  // ! inverted
-  if (state == LOW) {
-    current_self_drive_pin = 0;
-    self_drive_timer.begin(nextSelfDrivePin, SELF_DRIVE_INTERVAL);
-  } else {
-    self_drive_timer.end();
-  }
 }
 
 // Initial start function
@@ -104,10 +90,6 @@ void setup() {
     pinMode(key_pins[i], INPUT);
   }
   pinMode(POWER_SUPPLY_CHECK_PIN, INPUT);
-  // Manual call, so we can set the initial state
-  powerStateChanged();
-  // Setup interrupt for power supply
-  attachInterrupt(POWER_SUPPLY_CHECK_PIN, []() { while (true); }, CHANGE);
 }
 
 // Main loop
@@ -152,5 +134,10 @@ void loop() {
 
   // MIDI Controllers should discard incoming MIDI messages.
   while (usbMIDI.read()) {
+  }
+
+  // switch to next key group, if self powered
+  if (digitalReadFast(POWER_SUPPLY_CHECK_PIN) == LOW) {
+    nextSelfDrivePin();
   }
 }
