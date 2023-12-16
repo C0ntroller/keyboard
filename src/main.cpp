@@ -98,7 +98,7 @@ void setup() {
   // Set all in- and outputs
   for (uint8_t i = 0; i < KEY_GROUP_NUM; i++) {
     pinMode(group_pins[i], INPUT);
-    pinMode(self_drive_pins[i], INPUT);
+    pinMode(self_drive_pins[i], OUTPUT);
   }
   for (uint8_t i = 0; i < KEY_PINS; i++) {
     pinMode(key_pins[i], INPUT);
