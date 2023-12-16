@@ -27,15 +27,15 @@ IntervalTimer self_drive_timer = IntervalTimer();
 // Map the current array and pressed key to a MIDI note
 uint8_t mapToMidi(uint8_t active_key_group, uint8_t key) {
   uint8_t offset = (active_key_group >> 1) * 12;
-  // TODO: maybe we have to switch the notes and array offsets
+  // case 3 and case 4 are swapped on purpose to reflect circuitry
   // Uneven offset are the upper octave, even the lower
   if (active_key_group & 1) {
     switch (key) {
       case 0: return offset + 42; // F#2 + offset
       case 1: return offset + 43; // G2 + offset
       case 2: return offset + 44; // G#2 + offset
-      case 3: return offset + 45; // A2 + offset
-      case 4: return offset + 46; // A#2 + offset
+      case 4: return offset + 45; // A2 + offset
+      case 3: return offset + 46; // A#2 + offset
       case 5: return offset + 47; // B2 + offset
     }
   } else {
@@ -43,8 +43,8 @@ uint8_t mapToMidi(uint8_t active_key_group, uint8_t key) {
       case 0: return offset + 36; // C2 + offset
       case 1: return offset + 37; // C#2 + offset
       case 2: return offset + 38; // D2 + offset
-      case 3: return offset + 39; // D#2 + offset
-      case 4: return offset + 40; // E2 + offset
+      case 4: return offset + 39; // D#2 + offset
+      case 3: return offset + 40; // E2 + offset
       case 5: return offset + 41; // F2 + offset
     }
   }
