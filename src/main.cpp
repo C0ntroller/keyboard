@@ -14,6 +14,8 @@ const uint8_t group_pins[KEY_GROUP_NUM] {14, 15, 16, 17, 18, 19, 20, 21, 22};
 const uint8_t key_pins[KEY_PINS] {2, 3, 4, 5, 6, 7};
 // Array of pressed keys (initially all 0)
 uint8_t keys_pressed[NUMBER_OF_KEYS];
+// Array of currently active midi notes
+bool active_notes[NUMBER_OF_KEYS];
 // K1, K2, K3, K4, K5, K12, K13, K14, K15
 const uint8_t self_drive_pins[KEY_GROUP_NUM] {8, 9, 10, 11, 12, 26, 23, 24, 25};
 uint8_t current_self_drive_pin = 0;
@@ -69,8 +71,9 @@ int8_t getActiveKeyGroup() {
 
 // Set the next self drive pin
 FASTRUN void nextSelfDrivePin() {
-  // Set the current pin to high
+  // Set previous pin to low
   digitalWriteFast(self_drive_pins[current_self_drive_pin != 0 ? current_self_drive_pin - 1 : KEY_GROUP_NUM - 1], LOW);
+  // Set the current pin to high
   digitalWriteFast(self_drive_pins[current_self_drive_pin], HIGH);
   // Set the next pin
   current_self_drive_pin = (current_self_drive_pin + 1) % KEY_GROUP_NUM;
@@ -111,7 +114,9 @@ void loop() {
       // ! inverted
       if (value == LOW) { 
         // Check if the key is not already pressed
-        if (keys_pressed[active_key_group * 6 + i] >= DEBOUNCE_TIMES) {
+        if (keys_pressed[active_key_group * 6 + i] >= DEBOUNCE_TIMES && !active_notes[active_key_group * 6 + i]) {
+          // Note is on
+          active_notes[active_key_group * 6 + i] = true;
           // Send MIDI message
           usbMIDI.sendNoteOn(mapToMidi(active_key_group, i), 127, 1);
         }
@@ -120,7 +125,9 @@ void loop() {
         keys_pressed[active_key_group * 6 + i] += keys_pressed[active_key_group * 6 + i] < 0xFF ? 1 : 0;
       } else {
         // Check if the key is not already released
-        if (keys_pressed[active_key_group * 6 + i] < DEBOUNCE_TIMES) {
+        if (keys_pressed[active_key_group * 6 + i] < DEBOUNCE_TIMES && active_notes[active_key_group * 6 + i]) {
+          // Note is off
+          active_notes[active_key_group * 6 + i] = false;
           // Send MIDI message
           usbMIDI.sendNoteOff(mapToMidi(active_key_group, i), 0, 1);
         }
